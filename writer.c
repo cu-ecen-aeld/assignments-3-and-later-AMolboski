@@ -21,6 +21,7 @@ int main (int argc, char *argv[]) {
   if (write_result == -1 || write_result !=strlen(argv[2])) {
     syslog(LOG_ERR, "Error writing to file");
     exit_status = 1;
+    return exit_status;
   } else {
     exit_status = 0;
     syslog(LOG_DEBUG, "Writing %s to %s",argv[2],argv[1]);
@@ -30,6 +31,7 @@ int main (int argc, char *argv[]) {
   if (close_result == -1) {
     syslog(LOG_ERR, "Error clsoing file");
     exit_status = 1;
+    return exit_status;
   } else {
     exit_status = 0;
   }
