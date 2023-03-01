@@ -145,8 +145,8 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
       }
     }
 
-    exit_bool = (waitpid(pID, &status, 0) == -1 0) ? false : true;
-  
+    exit_bool = (waitpid(pID, &status, 0) == -1) ? false : true;
+
 
     va_end(args);
 
