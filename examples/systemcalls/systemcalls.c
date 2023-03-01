@@ -116,7 +116,12 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     worked exactly as intended.
 
     I must admit, I'm not sure why this is the case - I thought command[1:end] was what should have been the second argument of execv(), not the entire
-    array. Changing this in do_exec() does not seem to affect the test results.
+    array. Changing this in do_exec() does not seem to affect the test results. This does mean, of course, that the O_TRUNC
+    option only exposed the issue, and wasn't the underlying issue itself.*/
+
+    /* 3rd commit: After looking at some printf() statements of what was passed into this function, I think I understand now: from the man pages,
+    the argv argument of execv() is, by convention, the name of the file to be executed, which, in these examples, is the also the initial argument of execv()?
+    I'm not entirely convinced this is correct, but I'll worry about it later.
     */
 
     pid_t pID;
@@ -128,7 +133,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
       switch (pID = fork()) {
         case -1: exit_bool = false;
         case 0:
-          if (dup2(fd,1)<=0) {
+          if (dup2(fd,1)<0) {
             exit_bool = false;
           } else {
             close(fd);
@@ -140,7 +145,8 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
       }
     }
 
-    exit_bool = (waitpid(pID, &status, 0) < 0) ? false : true;
+    exit_bool = (waitpid(pID, &status, 0) == -1 0) ? false : true;
+  
 
     va_end(args);
 
