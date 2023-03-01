@@ -63,12 +63,11 @@ bool do_exec(int count, ...)
     bool exit_bool;
     int status;
 
-    fflush(stdout);
     pid_t pID = fork();
     if (pID == -1) {
       exit_bool = false;
     } else if (pID == 0){
-      int execStatus = execv(command[0],&command[1]);
+      int execStatus = execv(command[0],command);
       exit (execStatus==-1);
 
       exit_bool = (waitpid(pID, &status, 0) <0) ? false : true;
@@ -108,9 +107,18 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     int status;
 
 
-    // For some reason, the O_TRUNC option in open() prevents the first test for this function from expanding $HOME.
-    // However, removing this option present the second test for this function from passing because it *DOES* expand $HOME, when it apparently shouldn't
-    // Further examination is needed.
+    /* 1st commit: For some reason, the O_TRUNC option in open() prevents the first test for this function from expanding $HOME.
+    However, removing this option present the second test for this function from passing because it *DOES* expand $HOME, when it apparently shouldn't
+    Further examination is needed.*/
+
+    /* 2nd commit: while &command[1] as the second argument for do_exec() worked,
+    it did NOT work as intended here. When changed from &command[1] to command, it
+    worked exactly as intended.
+
+    I must admit, I'm not sure why this is the case - I thought command[1:end] was what should have been the second argument of execv(), not the entire
+    array. Changing this in do_exec() does not seem to affect the test results.
+    */
+
     pid_t pID;
     int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
     if (fd < 0) {
@@ -124,7 +132,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
             exit_bool = false;
           } else {
             close(fd);
-            int execStatus = execv(command[0],&command[1]);
+            int execStatus = execv(command[0],command);
             exit(execStatus == -1);
           }
         default:
