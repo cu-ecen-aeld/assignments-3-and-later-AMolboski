@@ -1,4 +1,8 @@
 #include "systemcalls.h"
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <fcntl.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -9,7 +13,7 @@
 */
 bool do_system(const char *cmd)
 {
-
+  bool exit_bool = (system(cmd) < 0) ? false : true;
 /*
  * TODO  add your code here
  *  Call the system() function with the command set in the cmd
@@ -17,7 +21,7 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
 
-    return true;
+    return exit_bool;
 }
 
 /**
@@ -47,8 +51,6 @@ bool do_exec(int count, ...)
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    command[count] = command[count];
-
 /*
  * TODO:
  *   Execute a system command by calling fork, execv(),
@@ -58,10 +60,23 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    bool exit_bool;
+    int status;
+
+    fflush(stdout);
+    pid_t pID = fork();
+    if (pID == -1) {
+      exit_bool = false;
+    } else if (pID == 0){
+      int execStatus = execv(command[0],&command[1]);
+      exit (execStatus==-1);
+
+      exit_bool = (waitpid(pID, &status, 0) <0) ? false : true;
+    }
 
     va_end(args);
 
-    return true;
+    return exit_bool;
 }
 
 /**
@@ -82,9 +97,6 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    command[count] = command[count];
-
-
 /*
  * TODO
  *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
@@ -92,8 +104,37 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+    bool exit_bool;
+    int status;
+
+
+    // For some reason, the O_TRUNC option in open() prevents the first test for this function from expanding $HOME.
+    // However, removing this option present the second test for this function from passing because it *DOES* expand $HOME, when it apparently shouldn't
+    // Further examination is needed.
+    pid_t pID;
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+    if (fd < 0) {
+      exit_bool = false;
+      exit(-1);
+    } else {
+      switch (pID = fork()) {
+        case -1: exit_bool = false;
+        case 0:
+          if (dup2(fd,1)<=0) {
+            exit_bool = false;
+          } else {
+            close(fd);
+            int execStatus = execv(command[0],&command[1]);
+            exit(execStatus == -1);
+          }
+        default:
+            close(fd);
+      }
+    }
+
+    exit_bool = (waitpid(pID, &status, 0) < 0) ? false : true;
 
     va_end(args);
 
-    return true;
+    return exit_bool;
 }
